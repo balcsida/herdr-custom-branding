@@ -50,6 +50,11 @@ The brand:
 **Buttons**: 26×26px with 15px icons in `muted`, 4px apart. On hover, the background
 turns `hover` and the icon `foreground`, with corners rounded 6px.
 
+**Full screen** (`window().fullscreen`): macOS hides the traffic lights, so the
+block always shows one row, with the brand 16px from the left edge, lined up with
+"Spaces", beside the buttons. A block taller than 46px shrinks to 46px and gets its
+height back when the window leaves full screen.
+
 **Rail** (sidebar narrower than 160px), in either arrangement: one row with only the
 toggle and 6px left padding. On macOS that row is empty, because the traffic lights
 fill it.
@@ -62,6 +67,9 @@ fill it.
   `sidebar.collapsed`, as `workspace-chrome` does, so the shipped mods and this one agree.
   On the macOS rail, the agents list's » unfolds it.
 - Resizing the block switches the arrangement on the next frame (72px is the line).
+- Entering full screen runs `layout.resize {id: <brand block>, px: 46}` and keeps the
+  old height in shared `custom-brand.height.<layout name>`. Leaving full screen
+  resizes the block back to that height and clears the key.
 - Dragging an empty part of the block moves the window, and double-clicking it
   maximizes. That comes from the layout block's `window_drag`. The buttons stop the
   press, so clicking them doesn't drag.
@@ -80,7 +88,11 @@ fill it.
   - Props (all optional): `name` (text; `""` for a wordmark), `logo` (an image path
     relative to `~/.config/herdr-app`, SVG or PNG), `logo_height` (px).
   - The root has `.id("root").on_size_change(...)`, which keeps `this.height` up to
-    date. Height 72 or more, when not on the rail, gives two rows.
+    date. Height 72 or more, when not on the rail and not in full screen, gives two rows.
+  - `fitHeight(fullscreen)`, called from `render`: finds the first block in `layout()`
+    whose `content.mod` is `custom-brand`, and resizes it as described above. Both
+    branches are guarded (`px > 46`, or a saved height with `px === 46`), so running on
+    every render is safe.
   - `narrow()` finds the `sidebar` node in `layout()` and checks whether its `size.px`
     is under 160.
   - Herdr: `theme`, `run`, `props`, `window` (`platform === "macos"`), `shared`,
@@ -139,6 +151,12 @@ doesn't overwrite it. Leave the `sidebar-footer` block on `workspace-chrome` wit
 - The byline uses Herdr's icon from `frame/`, which Herdr rewrites on every start. If a
   future version moves or renames `frame/welcome/herdr.png`, the icon goes blank and
   the text stays.
+- The full-screen resize is a layout click, so it lands in `layouts/.state/`, not in
+  your layout file. If Herdr quits while in full screen, it starts at 46px with the
+  saved height still in shared state, and leaving full screen restores it. Only the
+  first `custom-brand` block in a layout is resized.
+- Key the saved height by layout name. Layouts can give the block different heights,
+  and one shared key would restore the wrong one after a layout switch.
 - If you rename the mod folder, change the `mods/custom-brand/` paths in `main.js`
   (icons and the default logo) to match.
 
@@ -154,6 +172,8 @@ doesn't overwrite it. Leave the `sidebar-footer` block on `workspace-chrome` wit
   and `Herdr` stay whole.
 - Changing `name`, `logo` or `logo_height` in the layout file changes the block within
   a second. Leaving all three out shows `Acme` with the placeholder logo.
+- In full screen, an 84px block becomes one 46px row with the brand at 16px, and
+  leaving full screen brings back 84px and two rows.
 - Search opens the space picker. The toggle folds the sidebar to a rail and back to
   its old width. On the rail, only the toggle shows (on macOS, nothing).
 - In a light theme (`app.theme {name: "paper"}`), the name, byline and icons are still

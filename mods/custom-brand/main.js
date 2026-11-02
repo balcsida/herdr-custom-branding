@@ -24,6 +24,27 @@ function toggleSidebar() {
   run("layout.resize", { id: "sidebar", px: narrow() ? (shared("sidebar.width") ?? 268) : window()?.platform === "macos" ? 76 : 44 });
 }
 
+const findMod = (node) => node?.content?.mod === "custom-brand" ? node
+  : (node?.children ?? []).map(findMod).find(Boolean) ?? null;
+
+// Full screen hides the macOS traffic lights, so the brand fits beside the buttons:
+// shrink the block to one row (46px) and give its height back on leaving full screen.
+// shortcut: acts on the first custom-brand block in the layout; fine while there's one.
+function fitHeight(fullscreen) {
+  const node = findMod(layout());
+  const px = node?.size?.px;
+  if (!node?.id || !px) return;
+  const key = `custom-brand.height.${shared("layout")}`;
+  const saved = shared(key);
+  if (fullscreen && px > 46) {
+    setShared(key, px);
+    run("layout.resize", { id: node.id, px: 46 });
+  } else if (!fullscreen && saved && px === 46) {
+    setShared(key, null);
+    run("layout.resize", { id: node.id, px: saved });
+  }
+}
+
 export default class CustomBrand extends View {
   button(id, icon, action) {
     const t = theme();
@@ -56,18 +77,21 @@ export default class CustomBrand extends View {
     const t = theme();
     const collapsed = narrow();
     const mac = window()?.platform === "macos";
+    const fullscreen = Boolean(window()?.fullscreen);
+    fitHeight(fullscreen);
     const search = () => this.button("search", "search", () => run("mod.open", { name: "picker" }));
     const toggle = () => this.button("sidebar-toggle", "sidebar", toggleSidebar);
     const root = (el) => el.id("root").size_full().bg(t.chrome)
       .on_size_change((size, cx) => { this.height = size.height; cx.notify(); });
     // A tall block (72px+) gets two rows: buttons beside the window controls, the brand under them at the left edge.
-    if (!collapsed && (this.height ?? 0) >= 72) {
+    if (!collapsed && !fullscreen && (this.height ?? 0) >= 72) {
       return root(v_flex())
         .child(h_flex().h(44).flex_none().pr(10).gap(4).items_center().justify_end().child(search()).child(toggle()))
         .child(h_flex().flex_1().min_h(0).px(16).pb(6).items_center().child(this.brand()));
     }
     return root(h_flex()).pl(collapsed ? 6 : 14).pr(10).gap(4).items_center()
-      .when(mac && !collapsed, el => el.pl(76))
+      .when(mac && !collapsed && !fullscreen, el => el.pl(76))
+      .when(fullscreen && !collapsed, el => el.pl(16))
       .when(!collapsed, el => el.child(this.brand()).child(search()))
       // On the macOS rail the traffic lights fill the row; the agents list's » unfolds it.
       .when(!(collapsed && mac), el => el.child(toggle()));
