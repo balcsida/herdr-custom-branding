@@ -18,7 +18,7 @@ them. They sit in the empty top-left of each copy.
 The sidebar's top block, on the `chrome` background. It has two arrangements, chosen
 by the block's height:
 
-- **Two rows** (block 72px or taller; 84px recommended):
+- **Two rows** (block 72px or taller; 96px recommended):
   - Top row, 44px: empty on the left, where macOS draws its traffic lights. Search and
     the sidebar toggle sit on the right, 10px in.
   - Under it, the brand, 16px from the left edge so it lines up with the "Spaces"
@@ -30,8 +30,10 @@ by the block's height:
 
 The brand:
 
-- **Logo**: your image at its own aspect ratio. Only its height is set (24px next to
-  a name, 18px for a wordmark with no name, or `logo_height`). The default
+- **Logo**: your image at its own aspect ratio. Only its height is set (30px next to
+  a name, 24px for a wordmark with no name, or `logo_height`). A logo wider than the
+  space it has shrinks to fit that width, still at its own aspect ratio and centered
+  in its height, so a very wide wordmark is never cut off. The default
   `mods/custom-brand/logo.svg` is an orange-to-pink (`#f97316` → `#db2777`) rounded
   square with a white triangle outline.
 - **With a name**: the logo, then 8px to its right a column with the name above the
@@ -44,15 +46,16 @@ The brand:
   (`frame/welcome/herdr.png`, 12×12px, corners rounded 3px), then `Herdr` in `muted`.
   It can't be turned off. When the row is short of room, `Powered by` shortens
   (`Powere…`) first. The icon and `Herdr` stay whole.
-- Anything still too wide is clipped at the brand's edge, so it never pushes the
-  buttons out.
+- Anything else too wide (a long name) is clipped at the brand's edge, so it never
+  pushes the buttons out.
 
 **Buttons**: 26×26px with 15px icons in `muted`, 4px apart. On hover, the background
 turns `hover` and the icon `foreground`, with corners rounded 6px.
 
 **Full screen** (`window().fullscreen`): macOS hides the traffic lights, so the
 block always shows one row, with the brand 16px from the left edge, lined up with
-"Spaces", beside the buttons. A block taller than 46px shrinks to 46px and gets its
+"Spaces", beside the buttons. A block taller than 58px shrinks to 58px (room for the
+30px logo with about 9px above it) and gets its
 height back when the window leaves full screen.
 
 **Rail** (sidebar narrower than 160px), in either arrangement: one row with only the
@@ -67,7 +70,7 @@ fill it.
   `sidebar.collapsed`, as `workspace-chrome` does, so the shipped mods and this one agree.
   On the macOS rail, the agents list's » unfolds it.
 - Resizing the block switches the arrangement on the next frame (72px is the line).
-- Entering full screen runs `layout.resize {id: <brand block>, px: 46}` and keeps the
+- Entering full screen runs `layout.resize {id: <brand block>, px: 58}` and keeps the
   old height in shared `custom-brand.height.<layout name>`. Leaving full screen
   resizes the block back to that height and clears the key.
 - Dragging an empty part of the block moves the window, and double-clicking it
@@ -91,7 +94,7 @@ fill it.
     date. Height 72 or more, when not on the rail and not in full screen, gives two rows.
   - `fitHeight(fullscreen)`, called from `render`: finds the first block in `layout()`
     whose `content.mod` is `custom-brand`, and resizes it as described above. Both
-    branches are guarded (`px > 46`, or a saved height with `px === 46`), so running on
+    branches are guarded (`px > 58`, or a saved height with `px === 58`), so running on
     every render is safe.
   - `narrow()` finds the `sidebar` node in `layout()` and checks whether its `size.px`
     is under 160.
@@ -112,17 +115,17 @@ To use it, clone `main` and point the clone's `brand` block at it:
 herdr-app do layout.clone '{"name":"main","as":"my-main"}'
 ```
 
-Then, in `layouts/my-main.json`, set `size.px` to 84 for the two-row arrangement (it
+Then, in `layouts/my-main.json`, set `size.px` to 96 for the two-row arrangement (it
 mainly helps on macOS), or keep 46 for one row:
 
 ```json
-{ "id": "brand", "type": "block", "size": { "px": 84 }, "window_drag": true,
+{ "id": "brand", "type": "block", "size": { "px": 96 }, "window_drag": true,
   "content": { "mod": "custom-brand",
                "props": { "name": "Acme Studio", "logo": "my-brand/logo.svg" } } }
 ```
 
 For a wordmark: `"props": { "name": "", "logo": "my-brand/wordmark.svg" }`. Add
-`"logo_height": 32` for a tall logo that looks too small. Keep your logo outside
+`"logo_height": 40` for a tall logo that looks too small. Keep your logo outside
 `mods/custom-brand/` (here `~/.config/herdr-app/my-brand/`), so updating the mod
 doesn't overwrite it. Leave the `sidebar-footer` block on `workspace-chrome` with
 `{ "footer": true }`.
@@ -132,6 +135,9 @@ doesn't overwrite it. Leave the `sidebar-footer` block on `workspace-chrome` wit
 - Shipped layouts are read-only, and `layout.set` on them changes only clicks and
   looks. The brand block can only be swapped in a layout of your own. That also means
   it doesn't follow later changes Herdr makes to `workspace-chrome`'s header.
+- Give the logo `max_w("100%")` as well as its height. A width that runs out then
+  shrinks the box, and the image is drawn contained in it, so a very wide logo scales
+  down instead of being cut off.
 - Size the logo with height only. `image()` has no object-fit: setting both width and
   height stretches the logo, and `.size(n)` squashes anything that isn't square.
   Height alone keeps its aspect ratio.
@@ -152,7 +158,7 @@ doesn't overwrite it. Leave the `sidebar-footer` block on `workspace-chrome` wit
   future version moves or renames `frame/welcome/herdr.png`, the icon goes blank and
   the text stays.
 - The full-screen resize is a layout click, so it lands in `layouts/.state/`, not in
-  your layout file. If Herdr quits while in full screen, it starts at 46px with the
+  your layout file. If Herdr quits while in full screen, it starts at 58px with the
   saved height still in shared state, and leaving full screen restores it. Only the
   first `custom-brand` block in a layout is resized.
 - Key the saved height by layout name. Layouts can give the block different heights,
@@ -164,16 +170,17 @@ doesn't overwrite it. Leave the `sidebar-footer` block on `workspace-chrome` wit
 
 - `herdr-app check ~/.config/herdr-app/mods/custom-brand` passes, and
   `herdr-app status` lists no errors with the clone shown.
-- At 84px, a `herdr-app shot` (window in front) shows the buttons on the top row and
+- At 96px, a `herdr-app shot` (window in front) shows the buttons on the top row and
   the logo's left edge lined up with the "Spaces" heading. At 46px it shows one row.
+- A 12:1 wordmark (480×40) shows whole, both ends visible, scaled to the brand's width.
 - A square logo (64×64), a wide one (200×50) and a tall one (40×100) each keep their
   shape. A wide wordmark with `"name": ""` sits over the byline.
 - In a 268px sidebar on macOS with one row, the byline shows `Powere…` and the icon
   and `Herdr` stay whole.
 - Changing `name`, `logo` or `logo_height` in the layout file changes the block within
   a second. Leaving all three out shows `Acme` with the placeholder logo.
-- In full screen, an 84px block becomes one 46px row with the brand at 16px, and
-  leaving full screen brings back 84px and two rows.
+- In full screen, a 96px block becomes one 58px row with the brand at 16px, and
+  leaving full screen brings back 96px and two rows.
 - Search opens the space picker. The toggle folds the sidebar to a rail and back to
   its old width. On the rail, only the toggle shows (on macOS, nothing).
 - In a light theme (`app.theme {name: "paper"}`), the name, byline and icons are still

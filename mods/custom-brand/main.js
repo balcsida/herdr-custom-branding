@@ -28,18 +28,20 @@ const findMod = (node) => node?.content?.mod === "custom-brand" ? node
   : (node?.children ?? []).map(findMod).find(Boolean) ?? null;
 
 // Full screen hides the macOS traffic lights, so the brand fits beside the buttons:
-// shrink the block to one row (46px) and give its height back on leaving full screen.
+// shrink the block to one row (COMPACT) and give its height back on leaving full screen.
 // shortcut: acts on the first custom-brand block in the layout; fine while there's one.
+const COMPACT = 58; // one row with the tallest default logo (30px) and room above it
+
 function fitHeight(fullscreen) {
   const node = findMod(layout());
   const px = node?.size?.px;
   if (!node?.id || !px) return;
   const key = `custom-brand.height.${shared("layout")}`;
   const saved = shared(key);
-  if (fullscreen && px > 46) {
+  if (fullscreen && px > COMPACT) {
     setShared(key, px);
-    run("layout.resize", { id: node.id, px: 46 });
-  } else if (!fullscreen && saved && px === 46) {
+    run("layout.resize", { id: node.id, px: COMPACT });
+  } else if (!fullscreen && saved && px === COMPACT) {
     setShared(key, null);
     run("layout.resize", { id: node.id, px: saved });
   }
@@ -58,7 +60,7 @@ export default class CustomBrand extends View {
     const t = theme();
     const { name, logo, logo_height } = { ...DEFAULTS, ...props() };
     // Height only: the image keeps its own aspect ratio, square, wide or tall.
-    const mark = image(logo).h(logo_height ?? (name ? 24 : 18)).flex_none();
+    const mark = image(logo).h(logo_height ?? (name ? 30 : 24)).max_w("100%").flex_none();
     // When space runs out, "Powered by" gives way first; Herdr's icon and name never do.
     const byline = h_flex().min_w(0).gap(3).items_center().text_size(10.5).line_height(1.2).text_color(t.dim)
       .child(div().min_w(0).truncate().child("Powered by"))
