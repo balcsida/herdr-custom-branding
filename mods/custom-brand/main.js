@@ -1,6 +1,8 @@
 import { View, div, image, svg } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
-import { theme, run, props, window, shared, setShared, layout } from "herdr";
+import * as fs from "fs/promises";
+import { theme, run, props, window, shared, setShared, layout, settings, appHome, readTextFile } from "herdr";
+import { sizeSvg } from "./sized.js";
 
 // Your brand, from the block's props; the byline below it always credits Herdr.
 const DEFAULTS = { name: "Acme", logo: "mods/custom-brand/logo.svg" };
@@ -47,7 +49,36 @@ function fitHeight(fullscreen) {
   }
 }
 
+// Hidden, so writing it doesn't reload the mod.
+const SIZED = "mods/custom-brand/.sized";
+
 export default class CustomBrand extends View {
+  // An SVG logo, redrawn at the size it's shown (see sized.js); the original until it's ready.
+  // shortcut: made once per copy, so an edited logo file shows after the mod reloads.
+  logoAt(logo, height, cx) {
+    if (!/\.svg$/i.test(logo)) return logo;
+    const px = height * Number(settings().zoom ?? 1);
+    const key = `${logo}@${px}`;
+    this.sized ??= {};
+    if (!(key in this.sized)) {
+      this.sized[key] = logo;
+      cx.spawn(async (cx) => {
+        try {
+          const svg = sizeSvg((await readTextFile(`${appHome()}/${logo}`)) ?? "", px);
+          if (!svg) return;
+          const out = `${SIZED}/${logo.replace(/[^\w.-]+/g, "_")}@${px}.svg`;
+          await fs.mkdir(`${appHome()}/${SIZED}`, { recursive: true });
+          await fs.writeFile(`${appHome()}/${out}`, svg);
+          this.sized[key] = out;
+          cx.notify();
+        } catch (e) {
+          console.log(`custom-brand: drawing ${logo} as is: ${e}`);
+        }
+      });
+    }
+    return this.sized[key];
+  }
+
   button(id, icon, action) {
     const t = theme();
     return div().id(id).size(26).flex_none().flex().items_center().justify_center().rounded(6).text_color(t.muted)
@@ -56,11 +87,12 @@ export default class CustomBrand extends View {
       .child(svg(`mods/custom-brand/${icon}.svg`).size(15));
   }
 
-  brand() {
+  brand(cx) {
     const t = theme();
     const { name, logo, logo_height } = { ...DEFAULTS, ...props() };
+    const height = logo_height ?? (name ? 30 : 24);
     // Height only: the image keeps its own aspect ratio, square, wide or tall.
-    const mark = image(logo).h(logo_height ?? (name ? 30 : 24)).max_w("100%").flex_none();
+    const mark = image(this.logoAt(logo, height, cx)).h(height).max_w("100%").flex_none();
     // When space runs out, "Powered by" gives way first; Herdr's icon and name never do.
     const byline = h_flex().min_w(0).gap(3).items_center().text_size(10.5).line_height(1.2).text_color(t.dim)
       .child(div().min_w(0).truncate().child("Powered by"))
@@ -75,7 +107,7 @@ export default class CustomBrand extends View {
         .child(byline));
   }
 
-  render() {
+  render(cx) {
     const t = theme();
     const collapsed = narrow();
     const mac = window()?.platform === "macos";
@@ -89,12 +121,12 @@ export default class CustomBrand extends View {
     if (!collapsed && !fullscreen && (this.height ?? 0) >= 72) {
       return root(v_flex())
         .child(h_flex().h(44).flex_none().pr(10).gap(4).items_center().justify_end().child(search()).child(toggle()))
-        .child(h_flex().flex_1().min_h(0).px(16).pb(6).items_center().child(this.brand()));
+        .child(h_flex().flex_1().min_h(0).px(16).pb(6).items_center().child(this.brand(cx)));
     }
     return root(h_flex()).pl(collapsed ? 6 : 14).pr(10).gap(4).items_center()
       .when(mac && !collapsed && !fullscreen, el => el.pl(76))
       .when(fullscreen && !collapsed, el => el.pl(16))
-      .when(!collapsed, el => el.child(this.brand()).child(search()))
+      .when(!collapsed, el => el.child(this.brand(cx)).child(search()))
       // On the macOS rail the traffic lights fill the row; the agents list's » unfolds it.
       .when(!(collapsed && mac), el => el.child(toggle()));
   }

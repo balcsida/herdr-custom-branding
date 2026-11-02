@@ -33,7 +33,8 @@ The brand:
 - **Logo**: your image at its own aspect ratio. Only its height is set (30px next to
   a name, 24px for a wordmark with no name, or `logo_height`). A logo wider than the
   space it has shrinks to fit that width, still at its own aspect ratio and centered
-  in its height, so a very wide wordmark is never cut off. The default
+  in its height, so a very wide wordmark is never cut off. SVG edges are smooth at
+  any size the file declares (see Built from). The default
   `mods/custom-brand/logo.svg` is an orange-to-pink (`#f97316` → `#db2777`) rounded
   square with a white triangle outline.
 - **With a name**: the logo, then 8px to its right a column with the name above the
@@ -102,6 +103,16 @@ fill it.
     `setShared`, `layout`; commands `mod.open` and `layout.resize`.
   - gpui-kit: `div`, `image` (logo, Herdr icon), `svg` (button icons); gpui-base:
     `h_flex`, `v_flex`.
+- `mods/custom-brand/sized.js`: `sizeSvg(text, height)` rewrites the root `<svg>`
+  tag's `width`/`height` to the size the logo is drawn at (height × `settings().zoom`,
+  width from the `viewBox`'s aspect ratio). It adds a `viewBox` from the old size when
+  there is none, and returns null when it can't tell the shape (no `viewBox` and no
+  plain-number size, e.g. `100%`). `sized.test.mjs` tests it: `node mods/custom-brand/sized.test.mjs`.
+- In `main.js`, `logoAt(logo, height, cx)`: for an `.svg` logo, the first render
+  reads it with `readTextFile`, writes the resized copy with `fs/promises`
+  (`mkdir`, `writeFile`) to `mods/custom-brand/.sized/<logo path>@<px>.svg`, and draws
+  that copy from then on. It draws the original until then, and if anything fails
+  (logged to the console). PNG and other images are drawn as they are.
 - `mods/custom-brand/search.svg`, `sidebar.svg`: copies of the shipped
   `workspace-chrome` icons (Lucide-style, 24×24 viewBox, `currentColor` strokes).
 - `mods/custom-brand/logo.svg`: the placeholder logo, 64×64.
@@ -135,6 +146,12 @@ doesn't overwrite it. Leave the `sidebar-footer` block on `workspace-chrome` wit
 - Shipped layouts are read-only, and `layout.set` on them changes only clicks and
   looks. The brand block can only be swapped in a layout of your own. That also means
   it doesn't follow later changes Herdr makes to `workspace-chrome`'s header.
+- Herdr draws an SVG at the size its own `width`/`height` declare and then scales the
+  picture. A file declaring 2000×500 drawn at 24px tall comes out jagged, one declaring
+  20×5 comes out blurry, and only a matching size is smooth. That's why `sized.js`
+  exists. There's no antialiasing setting to turn on instead.
+- Write the resized copies to a hidden folder (`.sized`). Writing a visible file in
+  the mod folder reloads the mod, and that would loop. Leave `.sized/` out of git.
 - Give the logo `max_w("100%")` as well as its height. A width that runs out then
   shrinks the box, and the image is drawn contained in it, so a very wide logo scales
   down instead of being cut off.
@@ -172,6 +189,10 @@ doesn't overwrite it. Leave the `sidebar-footer` block on `workspace-chrome` wit
   `herdr-app status` lists no errors with the clone shown.
 - At 96px, a `herdr-app shot` (window in front) shows the buttons on the top row and
   the logo's left edge lined up with the "Spaces" heading. At 46px it shows one row.
+- Three copies of one SVG logo declaring 2000×500, 20×5 and 96×24, each drawn 24px
+  tall, all come out equally smooth in a zoomed-in `herdr-app shot`, and
+  `mods/custom-brand/.sized/` holds one file per logo and height.
+- `node mods/custom-brand/sized.test.mjs` prints `sized: ok`.
 - A 12:1 wordmark (480×40) shows whole, both ends visible, scaled to the brand's width.
 - A square logo (64×64), a wide one (200×50) and a tall one (40×100) each keep their
   shape. A wide wordmark with `"name": ""` sits over the byline.
