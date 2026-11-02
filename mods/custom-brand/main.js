@@ -39,7 +39,7 @@ export default class CustomBrand extends View {
     // Height only: the image keeps its own aspect ratio, square, wide or tall.
     const mark = image(logo).h(logo_height ?? (name ? 24 : 18)).flex_none();
     // When space runs out, "Powered by" gives way first; Herdr's icon and name never do.
-    const byline = h_flex().min_w(0).gap(3).items_center().text_size(10.5).text_color(t.dim)
+    const byline = h_flex().min_w(0).gap(3).items_center().text_size(10.5).line_height(1.2).text_color(t.dim)
       .child(div().min_w(0).truncate().child("Powered by"))
       .child(image("frame/welcome/herdr.png").size(12).flex_none().rounded(3))
       .child(div().flex_none().text_color(t.muted).child("Herdr"));
@@ -48,7 +48,7 @@ export default class CustomBrand extends View {
     return h_flex().flex_1().min_w(0).overflow_hidden().gap(8).items_center()
       .child(mark)
       .child(v_flex().min_w(0).gap(1)
-        .child(div().text_size(13.5).font_semibold().text_color(t.foreground).truncate().child(name))
+        .child(div().text_size(13.5).line_height(1.2).font_semibold().text_color(t.foreground).truncate().child(name))
         .child(byline));
   }
 

@@ -36,7 +36,8 @@ The brand:
   square with a white triangle outline.
 - **With a name**: the logo, then 8px to its right a column with the name above the
   byline, 1px apart. The name is 13.5px semibold in `foreground`, cut off with an
-  ellipsis when there's no room.
+  ellipsis when there's no room. The name and the byline both have line height 1.2,
+  so they sit close together.
 - **Without a name** (`"name": ""`): the logo with the byline 3px under it, both
   left-aligned. This is for wordmarks.
 - **Byline**, 10.5px, its parts 3px apart: `Powered by` in `dim`, Herdr's app icon
@@ -122,6 +123,8 @@ doesn't overwrite it. Leave the `sidebar-footer` block on `workspace-chrome` wit
 - Size the logo with height only. `image()` has no object-fit: setting both width and
   height stretches the logo, and `.size(n)` squashes anything that isn't square.
   Height alone keeps its aspect ratio.
+- Set line height 1.2 on the name and the byline. Herdr's default line height leaves
+  a visible gap between them, even with `gap(1)`.
 - Every image in a flex row needs `flex_none()`, or the row squeezes it to a dot.
 - In the column for a wordmark, use `items_start()`. With the default stretch, the logo
   is stretched to the column's width.
